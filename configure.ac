@@ -18,8 +18,11 @@ PKG_CHECK_MODULES([lzma], [liblzma])
 PKG_CHECK_MODULES([zlib], [zlib])
 AC_ARG_ENABLE(
 	[bzip2],
-	AS_HELP_STRING([--disable-bzip2],[Do not use bzip2 compression (uses bzip2 by default)])
+	AS_HELP_STRING([--disable-bzip2],[Do not use bzip2 compression (uses bzip2 by default)]),
+	BZIP='no',
+	BZIP='yes'
 )
+
 AS_IF([test "x$enable_bzip2" != "xno" ],
   [AC_DEFINE(SWUPD_WITH_BZIP2,1,[Use bzip2 compression])
 	 AC_CHECK_LIB([bz2], [BZ2_bzBuffToBuffCompress], [], [AC_MSG_ERROR([the libbz2 library is missing])])],
@@ -29,19 +32,45 @@ AC_ARG_ENABLE(
   [signature-verification],
   [AS_HELP_STRING([--enable-signature-verification], [Enable signature check (disabled by default)])],
   [AC_DEFINE([SIGNATURES], 1, [Enable signature check as default])]
-
+    SIGVERIFICATION=${enableval}
 )
 
 if test "$enable_signature_verification" = "yes" ; then
 	AC_ARG_WITH([swupdcert],
 		[AS_HELP_STRING([--with-swupdcert=FILE], [swupd verification cert])],
-		[AC_DEFINE_UNQUOTED([SWUPDCERT], ["$withval"], [swupd verification cert])],
+		[AC_DEFINE_UNQUOTED([SWUPDCERT], ["$withval"], [swupd verification cert])]
+		  SWUPDCERT=${withval},
 		[AC_DEFINE([SWUPDCERT], ["ClearLinuxRoot.pem"], [swupd verification cert])])
+		  SWUPDCERT="ClearLinuxRoot.pem"
+		  DEFCERT="(Default) "
 fi
+
+AC_ARG_WITH([contenturl],
+	[AS_HELP_STRING([--with-contenturl=URL], [Default content url])],
+	  [AC_DEFINE_UNQUOTED([CONTENTURL], ["$withval"], [Default content url])]
+	  CONTENTURL=${withval},
+	CONTENTURL='!! Warning !! ContentURL not specified!'
+)
+
+AC_ARG_WITH([versionurl],
+	[AS_HELP_STRING([--with-versionurl=URL], [Default version url])],
+	[AC_DEFINE_UNQUOTED([VERSIONURL], ["$withval"], [Default version url])]
+	  VERSIONURL=${withval},
+	VERSIONURL='!! Warning !! VersionURL not specified!'
+)
+
+AC_ARG_WITH([formatid],
+	[AS_HELP_STRING([--with-formatid=NUM], [Default format identifier])],
+	[AC_DEFINE_UNQUOTED([FORMATID], ["$withval"], [Default format identifier])]
+	  FORMATID=${withval},
+	FORMATID='!! Warning !! FormatID not specified!'
+)
 
 AC_ARG_ENABLE(
   [tests],
-  [AS_HELP_STRING([--disable-tests], [Do not enable unit or functional test framework (enabled by default)])]
+  [AS_HELP_STRING([--disable-tests], [Do not enable unit or functional test framework (enabled by default)])],
+  TESTS='no',
+  TESTS='yes'
 )
 
 have_coverage=no
@@ -133,3 +162,20 @@ AC_SUBST([update_ca_certs_path], ["$certs_path"])
 AC_CONFIG_FILES([Makefile data/check-update.service data/check-update.timer])
 AC_REQUIRE_AUX_FILE([tap-driver.sh])
 AC_OUTPUT
+
+AC_MSG_NOTICE([
+
+------------
+swupd-client
+------------
+
+Configuration to build swupd-client:
+
+  Content URL:				${CONTENTURL}
+  Version URL:				${VERSIONURL}
+  Format Identifier:			${FORMATID}
+  Signature verification:		${SIGVERIFICATION}
+  ${DEFCERT}SSL Certificate file:	${SWUPDCERT}
+  Use bzip compression:			${BZIP}
+  Run Tests:				${TESTS}
+])
